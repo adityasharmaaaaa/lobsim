@@ -1,39 +1,39 @@
-#pragma once 
+#pragma once
 
 #include <compare>
 #include <cstdint>
 
-namespace lobsim{
+namespace lobsim {
 
+//prices are represented as integer ticks, never floating-point values.
 struct Price {
     std::int64_t ticks{};
-    
     auto operator<=>(const Price&) const = default;
 };
 
-struct Qty{
-    std::uint64_t value{};
-
+//signed deliberately: rest() must be able to reject negative input safely.
+struct Qty {
+    std::int64_t value{};
     auto operator<=>(const Qty&) const = default;
 };
 
-struct OrderId{
+struct OrderId {
     std::uint64_t value{};
-
     auto operator<=>(const OrderId&) const = default;
 };
 
-enum class Side: std::uint8_t{
+enum class Side : std::uint8_t {
     Buy,
     Sell
 };
 
-struct Order{
+struct Order {
     OrderId id{};
     Side side{};
     Price price{};
     Qty qty{};
+    //sssigned by Book::rest; caller-provided values are ignored.
     std::uint64_t seq{};
 };
 
-} //namespace lobsim
+}  // namespace lobsim
