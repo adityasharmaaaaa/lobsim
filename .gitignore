@@ -1,62 +1,7 @@
-# Build directories and generated CMake files
 /build/
 /cmake-build-*/
-/CMakeFiles/
-/CMakeCache.txt
-/cmake_install.cmake
-/Makefile
-/build.ninja
-/compile_commands.json
-Testing/
-
-# Compiled artifacts
-*.o
-*.obj
-*.a
-*.lib
-*.so
-*.dylib
-*.dll
-*.exe
-*.out
-
-# Test and profiling artifacts
-*.profraw
-*.profdata
-*.gcda
-*.gcno
-*.prof
-*.trace
-*.core
-
-# Generated data and experiment outputs
 /data/*
 !/data/.gitkeep
 /experiments/results/*
 !/experiments/results/.gitkeep
-
-# Python
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
-env/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# IDE and OS files
 .DS_Store
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# Local environment and secrets
-.env
-.env.*
-!.env.example
