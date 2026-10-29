@@ -1,0 +1,356 @@
+diff --git a/include/lobsim/book/book.hpp b/include/lobsim/book/book.hpp
+index d048d16..2796414 100644
+--- a/include/lobsim/book/book.hpp
++++ b/include/lobsim/book/book.hpp
+@@ -43,6 +43,9 @@ public:
+     [[nodiscard]] std::optional<std::string> check_invariants() const;
+ 
+ private:
++    // Test-only friend: keeps per-level FIFO inspection out of the public API.
++    friend struct BookTestAccess;
++
+     using OrderQueue = std::deque<Order>;
+     using BidLevels = std::map<Price, OrderQueue, std::greater<Price>>;
+     using AskLevels = std::map<Price, OrderQueue>;
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index 0d5d180..f2211d3 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
+ 
+ add_executable(lobsim_tests
+     unit/book_test.cpp
++    unit/lesson1_worked_example_test.cpp
+ )
+ 
+ target_link_libraries(lobsim_tests
+diff --git a/tests/fixtures/lesson1_worked_example.hpp b/tests/fixtures/lesson1_worked_example.hpp
+new file mode 100644
+index 0000000..1e1a023
+--- /dev/null
++++ b/tests/fixtures/lesson1_worked_example.hpp
+@@ -0,0 +1,80 @@
++#pragma once
++
++#include "lobsim/book/book.hpp"
++
++#include <stdexcept>
++#include <string>
++#include <vector>
++
++namespace lobsim {
++
++// Test-only access shim. It is a friend of Book so tests can verify FIFO order
++// without adding a production-facing queue-inspection API.
++struct BookTestAccess {
++    [[nodiscard]] static std::vector<OrderId> order_ids_at(const Book& book, Side side, Price price) {
++        std::vector<OrderId> ids;
++
++        if (side == Side::Buy) {
++            const auto level_it = book.bids_.find(price);
++            if (level_it == book.bids_.end()) {
++                return ids;
++            }
++            ids.reserve(level_it->second.size());
++            for (const auto& order : level_it->second) {
++                ids.push_back(order.id);
++            }
++            return ids;
++        }
++
++        if (side == Side::Sell) {
++            const auto level_it = book.asks_.find(price);
++            if (level_it == book.asks_.end()) {
++                return ids;
++            }
++            ids.reserve(level_it->second.size());
++            for (const auto& order : level_it->second) {
++                ids.push_back(order.id);
++            }
++        }
++        return ids;
++    }
++};
++
++namespace test_fixtures {
++
++// Prices are represented as integer ticks. With a $0.01 tick size, $100.04
++// is Price{10004}, not a floating-point dollar value.
++inline void rest_checked(Book& book, Order order) {
++    const RestResult result = book.rest(order);
++    if (!result) {
++        throw std::logic_error("Could not construct Lesson 1 worked-example fixture: " +
++                               std::string(to_string(result.error)));
++    }
++
++    // The fixture intentionally checks the invariant checker after every
++    // mutation, not just once after the whole initial book has been built.
++    if (const auto error = book.check_invariants()) {
++        throw std::logic_error("Lesson 1 fixture violated a book invariant: " + *error);
++    }
++}
++
++[[nodiscard]] inline Book make_lesson1_worked_example_book() {
++    Book book;
++
++    // Asks: low to high. The order within each level is FIFO.
++    rest_checked(book, Order{OrderId{4}, Side::Sell, Price{10007}, Qty{600}, 0});  // A4 @ 100.07
++    rest_checked(book, Order{OrderId{3}, Side::Sell, Price{10005}, Qty{400}, 0});  // A3 @ 100.05
++    rest_checked(book, Order{OrderId{1}, Side::Sell, Price{10004}, Qty{150}, 0});  // A1 @ 100.04
++    rest_checked(book, Order{OrderId{2}, Side::Sell, Price{10004}, Qty{250}, 0});  // A2 @ 100.04
++
++    // Bids: high to low. B1 must precede B2 at the 100.02 level.
++    rest_checked(book, Order{OrderId{11}, Side::Buy, Price{10002}, Qty{200}, 0});  // B1 @ 100.02
++    rest_checked(book, Order{OrderId{12}, Side::Buy, Price{10002}, Qty{100}, 0});  // B2 @ 100.02
++    rest_checked(book, Order{OrderId{13}, Side::Buy, Price{10001}, Qty{500}, 0});  // B3 @ 100.01
++    rest_checked(book, Order{OrderId{14}, Side::Buy, Price{10000}, Qty{300}, 0});  // B4 @ 100.00
++
++    return book;
++}
++
++}  // namespace test_fixtures
++}  // namespace lobsim
+diff --git a/tests/golden/README.md b/tests/golden/README.md
+new file mode 100644
+index 0000000..aa5c50e
+--- /dev/null
++++ b/tests/golden/README.md
+@@ -0,0 +1,4 @@
++# Lesson 1 golden scenarios
++
++- `lesson1_worked_example.json` records the four-event worked example from Lesson 1 Section E. It is a reference specification until the matching engine is implemented.
++- `lesson1_hand_simulation.json` is deliberately marked blocked. The evaluator's separate five-event scenario (including 600 unfilled shares at event 5) is not fully present in Section E, so its source data must be copied in exactly before it can be accepted as a golden test.
+diff --git a/tests/golden/lesson1_hand_simulation.json b/tests/golden/lesson1_hand_simulation.json
+new file mode 100644
+index 0000000..b084917
+--- /dev/null
++++ b/tests/golden/lesson1_hand_simulation.json
+@@ -0,0 +1,12 @@
++{
++  "schema_version": 1,
++  "fixture_id": "lesson1_hand_simulation",
++  "status": "blocked_missing_original_five_event_scenario",
++  "expected_event_count": 5,
++  "note": "This is an explicit placeholder, not an accepted golden test. The pasted Lesson 1 Section E worked example has four events (E1-E4) and is stored in lesson1_worked_example.json. The evaluator refers to a separate five-event simulation, including an event with 600 unfilled shares; its exact initial book and full event list were not included in the supplied example. Fill this file from that original scenario rather than inventing trades or book states.",
++  "initial_book": null,
++  "events": [],
++  "expected_trades": [],
++  "expected_book_states": [],
++  "order_accounting": []
++}
+diff --git a/tests/golden/lesson1_worked_example.json b/tests/golden/lesson1_worked_example.json
+new file mode 100644
+index 0000000..531592c
+--- /dev/null
++++ b/tests/golden/lesson1_worked_example.json
+@@ -0,0 +1,149 @@
++{
++  "schema_version": 1,
++  "title": "Lesson 1 Section E worked example",
++  "status": "reference_only_matching_engine_not_implemented",
++  "tick_size_usd": 0.01,
++  "price_encoding": "integer ticks; e.g. $100.04 is 10004 ticks",
++  "initial_book": {
++    "asks_low_to_high": [
++      {"price_ticks": 10004, "orders": [{"label": "A1", "order_id": 1, "qty": 150}, {"label": "A2", "order_id": 2, "qty": 250}]},
++      {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
++      {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
++    ],
++    "bids_high_to_low": [
++      {"price_ticks": 10002, "orders": [{"label": "B1", "order_id": 11, "qty": 200}, {"label": "B2", "order_id": 12, "qty": 100}]},
++      {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 500}]},
++      {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
++    ],
++    "expected_metrics": {
++      "best_bid_ticks": 10002,
++      "best_ask_ticks": 10004,
++      "spread_ticks": 2,
++      "mid_x2_ticks": 20006,
++      "midpoint_ticks": 10003,
++      "midpoint_usd": 100.03
++    }
++  },
++  "events": [
++    {
++      "event_id": "E1",
++      "type": "limit_order",
++      "order_id": 5,
++      "label": "S5",
++      "side": "sell",
++      "qty": 100,
++      "limit_price_ticks": 10003,
++      "expected_trades": [],
++      "expected_book_after": {
++        "best_bid_ticks": 10002,
++        "best_ask_ticks": 10003,
++        "spread_ticks": 1,
++        "mid_x2_ticks": 20005,
++        "asks_low_to_high": [
++          {"price_ticks": 10003, "orders": [{"label": "S5", "order_id": 5, "qty": 100}]},
++          {"price_ticks": 10004, "orders": [{"label": "A1", "order_id": 1, "qty": 150}, {"label": "A2", "order_id": 2, "qty": 250}]},
++          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
++          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
++        ]
++      }
++    },
++    {
++      "event_id": "E2",
++      "type": "market_order",
++      "side": "buy",
++      "qty": 350,
++      "pre_trade_midpoint_ticks": 10002.5,
++      "expected_trades": [
++        {"maker_order_id": 5, "maker_label": "S5", "price_ticks": 10003, "qty": 100},
++        {"maker_order_id": 1, "maker_label": "A1", "price_ticks": 10004, "qty": 150},
++        {"maker_order_id": 2, "maker_label": "A2", "price_ticks": 10004, "qty": 100}
++      ],
++      "expected_trade_qty": 350,
++      "expected_notional_usd": 35013.0,
++      "expected_average_price_usd": 100.03714285714286,
++      "expected_slippage_vs_mid_ticks": 1.2142857142857142,
++      "expected_book_after": {
++        "best_bid_ticks": 10002,
++        "best_ask_ticks": 10004,
++        "spread_ticks": 2,
++        "mid_x2_ticks": 20006,
++        "asks_low_to_high": [
++          {"price_ticks": 10004, "orders": [{"label": "A2", "order_id": 2, "qty": 150}]},
++          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
++          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
++        ]
++      }
++    },
++    {
++      "event_id": "E3",
++      "type": "cancel_order",
++      "order_id": 11,
++      "label": "B1",
++      "expected_cancelled_qty": 200,
++      "expected_book_after": {
++        "best_bid_ticks": 10002,
++        "best_ask_ticks": 10004,
++        "spread_ticks": 2,
++        "mid_x2_ticks": 20006,
++        "bids_high_to_low": [
++          {"price_ticks": 10002, "orders": [{"label": "B2", "order_id": 12, "qty": 100}]},
++          {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 500}]},
++          {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
++        ]
++      }
++    },
++    {
++      "event_id": "E4",
++      "type": "limit_order",
++      "order_id": 7,
++      "label": "S7",
++      "side": "sell",
++      "qty": 500,
++      "limit_price_ticks": 10001,
++      "expected_trades": [
++        {"maker_order_id": 12, "maker_label": "B2", "price_ticks": 10002, "qty": 100, "price_improvement_ticks": 1},
++        {"maker_order_id": 13, "maker_label": "B3", "price_ticks": 10001, "qty": 400, "price_improvement_ticks": 0}
++      ],
++      "expected_trade_qty": 500,
++      "expected_unfilled_qty": 0,
++      "expected_book_after": {
++        "best_bid_ticks": 10001,
++        "best_ask_ticks": 10004,
++        "spread_ticks": 3,
++        "mid_x2_ticks": 20005,
++        "midpoint_ticks": 10002.5,
++        "bids_high_to_low": [
++          {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 100}]},
++          {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
++        ],
++        "asks_low_to_high": [
++          {"price_ticks": 10004, "orders": [{"label": "A2", "order_id": 2, "qty": 150}]},
++          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
++          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
++        ]
++      }
++    }
++  ],
++  "order_accounting_after_e4": [
++    {"label": "A1", "original": 150, "filled": 150, "cancelled": 0, "resting": 0},
++    {"label": "A2", "original": 250, "filled": 100, "cancelled": 0, "resting": 150},
++    {"label": "A3", "original": 400, "filled": 0, "cancelled": 0, "resting": 400},
++    {"label": "A4", "original": 600, "filled": 0, "cancelled": 0, "resting": 600},
++    {"label": "S5", "original": 100, "filled": 100, "cancelled": 0, "resting": 0},
++    {"label": "S7", "original": 500, "filled": 500, "cancelled": 0, "resting": 0},
++    {"label": "B1", "original": 200, "filled": 0, "cancelled": 200, "resting": 0},
++    {"label": "B2", "original": 100, "filled": 100, "cancelled": 0, "resting": 0},
++    {"label": "B3", "original": 500, "filled": 400, "cancelled": 0, "resting": 100},
++    {"label": "B4", "original": 300, "filled": 0, "cancelled": 0, "resting": 300}
++  ],
++  "summary_after_e4": {
++    "event_count": 4,
++    "trade_count": 5,
++    "total_traded_qty": 850,
++    "best_bid_ticks": 10001,
++    "best_ask_ticks": 10004,
++    "spread_ticks": 3,
++    "mid_x2_ticks": 20005,
++    "midpoint_ticks": 10002.5
++  }
++}
+diff --git a/tests/unit/lesson1_worked_example_test.cpp b/tests/unit/lesson1_worked_example_test.cpp
+new file mode 100644
+index 0000000..fcdb0ae
+--- /dev/null
++++ b/tests/unit/lesson1_worked_example_test.cpp
+@@ -0,0 +1,55 @@
++#include "lobsim/book/book.hpp"
++#include "../fixtures/lesson1_worked_example.hpp"
++
++#include <catch2/catch_test_macros.hpp>
++
++namespace lobsim {
++
++TEST_CASE("Lesson 1 Section E fixture preserves initial book state and FIFO") {
++    const Book book = test_fixtures::make_lesson1_worked_example_book();
++
++    // Dollar prices in the hand example are stored as integer cents/ticks.
++    REQUIRE(book.best_bid() == Price{10002});
++    REQUIRE(book.best_ask() == Price{10004});
++    REQUIRE(book.spread_ticks() == 2);
++    REQUIRE(book.mid_x2() == 20006);  // 10002 + 10004; midpoint is 10003 ticks = $100.03.
++
++    CHECK(book.depth_at(Side::Sell, Price{10004}) == Qty{400});
++    CHECK(book.depth_at(Side::Sell, Price{10005}) == Qty{400});
++    CHECK(book.depth_at(Side::Sell, Price{10007}) == Qty{600});
++    CHECK(book.depth_at(Side::Buy, Price{10002}) == Qty{300});
++    CHECK(book.depth_at(Side::Buy, Price{10001}) == Qty{500});
++    CHECK(book.depth_at(Side::Buy, Price{10000}) == Qty{300});
++
++    const auto asks = book.top_levels(Side::Sell, 3);
++    REQUIRE(asks.size() == 3);
++    CHECK(asks[0].price == Price{10004});
++    CHECK(asks[0].total_qty == Qty{400});
++    CHECK(asks[0].order_count == 2);
++    CHECK(asks[1].price == Price{10005});
++    CHECK(asks[2].price == Price{10007});
++
++    const auto bids = book.top_levels(Side::Buy, 3);
++    REQUIRE(bids.size() == 3);
++    CHECK(bids[0].price == Price{10002});
++    CHECK(bids[0].total_qty == Qty{300});
++    CHECK(bids[0].order_count == 2);
++    CHECK(bids[1].price == Price{10001});
++    CHECK(bids[2].price == Price{10000});
++
++    // Aggregate depth alone cannot prove FIFO; inspect the queue IDs directly
++    // through the test-only friend accessor.
++    const auto ask_queue = BookTestAccess::order_ids_at(book, Side::Sell, Price{10004});
++    REQUIRE(ask_queue.size() == 2);
++    CHECK(ask_queue[0] == OrderId{1});  // A1 arrived before A2.
++    CHECK(ask_queue[1] == OrderId{2});
++
++    const auto bid_queue = BookTestAccess::order_ids_at(book, Side::Buy, Price{10002});
++    REQUIRE(bid_queue.size() == 2);
++    CHECK(bid_queue[0] == OrderId{11});  // B1 arrived before B2.
++    CHECK(bid_queue[1] == OrderId{12});
++
++    CHECK_FALSE(book.check_invariants().has_value());
++}
++
++}  // namespace lobsim

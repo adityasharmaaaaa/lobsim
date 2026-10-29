@@ -47,6 +47,9 @@ public:
     [[nodiscard]] std::optional<std::string> check_invariants() const;
 
 private:
+    // Test-only friend: keeps per-level FIFO inspection out of the public API.
+    friend struct BookTestAccess;
+
     using OrderQueue = std::deque<Order>;
     using BidLevels = std::map<Price, OrderQueue, std::greater<Price>>;
     using AskLevels = std::map<Price, OrderQueue>;

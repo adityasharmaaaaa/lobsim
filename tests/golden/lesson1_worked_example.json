@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "title": "Lesson 1 Section E worked example",
+  "status": "reference_only_matching_engine_not_implemented",
+  "tick_size_usd": 0.01,
+  "price_encoding": "integer ticks; e.g. $100.04 is 10004 ticks",
+  "initial_book": {
+    "asks_low_to_high": [
+      {"price_ticks": 10004, "orders": [{"label": "A1", "order_id": 1, "qty": 150}, {"label": "A2", "order_id": 2, "qty": 250}]},
+      {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
+      {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
+    ],
+    "bids_high_to_low": [
+      {"price_ticks": 10002, "orders": [{"label": "B1", "order_id": 11, "qty": 200}, {"label": "B2", "order_id": 12, "qty": 100}]},
+      {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 500}]},
+      {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
+    ],
+    "expected_metrics": {
+      "best_bid_ticks": 10002,
+      "best_ask_ticks": 10004,
+      "spread_ticks": 2,
+      "mid_x2_ticks": 20006,
+      "midpoint_ticks": 10003,
+      "midpoint_usd": 100.03
+    }
+  },
+  "events": [
+    {
+      "event_id": "E1",
+      "type": "limit_order",
+      "order_id": 5,
+      "label": "S5",
+      "side": "sell",
+      "qty": 100,
+      "limit_price_ticks": 10003,
+      "expected_trades": [],
+      "expected_book_after": {
+        "best_bid_ticks": 10002,
+        "best_ask_ticks": 10003,
+        "spread_ticks": 1,
+        "mid_x2_ticks": 20005,
+        "asks_low_to_high": [
+          {"price_ticks": 10003, "orders": [{"label": "S5", "order_id": 5, "qty": 100}]},
+          {"price_ticks": 10004, "orders": [{"label": "A1", "order_id": 1, "qty": 150}, {"label": "A2", "order_id": 2, "qty": 250}]},
+          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
+          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
+        ]
+      }
+    },
+    {
+      "event_id": "E2",
+      "type": "market_order",
+      "side": "buy",
+      "qty": 350,
+      "pre_trade_midpoint_ticks": 10002.5,
+      "expected_trades": [
+        {"maker_order_id": 5, "maker_label": "S5", "price_ticks": 10003, "qty": 100},
+        {"maker_order_id": 1, "maker_label": "A1", "price_ticks": 10004, "qty": 150},
+        {"maker_order_id": 2, "maker_label": "A2", "price_ticks": 10004, "qty": 100}
+      ],
+      "expected_trade_qty": 350,
+      "expected_notional_usd": 35013.0,
+      "expected_average_price_usd": 100.03714285714286,
+      "expected_slippage_vs_mid_ticks": 1.2142857142857142,
+      "expected_book_after": {
+        "best_bid_ticks": 10002,
+        "best_ask_ticks": 10004,
+        "spread_ticks": 2,
+        "mid_x2_ticks": 20006,
+        "asks_low_to_high": [
+          {"price_ticks": 10004, "orders": [{"label": "A2", "order_id": 2, "qty": 150}]},
+          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
+          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
+        ]
+      }
+    },
+    {
+      "event_id": "E3",
+      "type": "cancel_order",
+      "order_id": 11,
+      "label": "B1",
+      "expected_cancelled_qty": 200,
+      "expected_book_after": {
+        "best_bid_ticks": 10002,
+        "best_ask_ticks": 10004,
+        "spread_ticks": 2,
+        "mid_x2_ticks": 20006,
+        "bids_high_to_low": [
+          {"price_ticks": 10002, "orders": [{"label": "B2", "order_id": 12, "qty": 100}]},
+          {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 500}]},
+          {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
+        ]
+      }
+    },
+    {
+      "event_id": "E4",
+      "type": "limit_order",
+      "order_id": 7,
+      "label": "S7",
+      "side": "sell",
+      "qty": 500,
+      "limit_price_ticks": 10001,
+      "expected_trades": [
+        {"maker_order_id": 12, "maker_label": "B2", "price_ticks": 10002, "qty": 100, "price_improvement_ticks": 1},
+        {"maker_order_id": 13, "maker_label": "B3", "price_ticks": 10001, "qty": 400, "price_improvement_ticks": 0}
+      ],
+      "expected_trade_qty": 500,
+      "expected_unfilled_qty": 0,
+      "expected_book_after": {
+        "best_bid_ticks": 10001,
+        "best_ask_ticks": 10004,
+        "spread_ticks": 3,
+        "mid_x2_ticks": 20005,
+        "midpoint_ticks": 10002.5,
+        "bids_high_to_low": [
+          {"price_ticks": 10001, "orders": [{"label": "B3", "order_id": 13, "qty": 100}]},
+          {"price_ticks": 10000, "orders": [{"label": "B4", "order_id": 14, "qty": 300}]}
+        ],
+        "asks_low_to_high": [
+          {"price_ticks": 10004, "orders": [{"label": "A2", "order_id": 2, "qty": 150}]},
+          {"price_ticks": 10005, "orders": [{"label": "A3", "order_id": 3, "qty": 400}]},
+          {"price_ticks": 10007, "orders": [{"label": "A4", "order_id": 4, "qty": 600}]}
+        ]
+      }
+    }
+  ],
+  "order_accounting_after_e4": [
+    {"label": "A1", "original": 150, "filled": 150, "cancelled": 0, "resting": 0},
+    {"label": "A2", "original": 250, "filled": 100, "cancelled": 0, "resting": 150},
+    {"label": "A3", "original": 400, "filled": 0, "cancelled": 0, "resting": 400},
+    {"label": "A4", "original": 600, "filled": 0, "cancelled": 0, "resting": 600},
+    {"label": "S5", "original": 100, "filled": 100, "cancelled": 0, "resting": 0},
+    {"label": "S7", "original": 500, "filled": 500, "cancelled": 0, "resting": 0},
+    {"label": "B1", "original": 200, "filled": 0, "cancelled": 200, "resting": 0},
+    {"label": "B2", "original": 100, "filled": 100, "cancelled": 0, "resting": 0},
+    {"label": "B3", "original": 500, "filled": 400, "cancelled": 0, "resting": 100},
+    {"label": "B4", "original": 300, "filled": 0, "cancelled": 0, "resting": 300}
+  ],
+  "summary_after_e4": {
+    "event_count": 4,
+    "trade_count": 5,
+    "total_traded_qty": 850,
+    "best_bid_ticks": 10001,
+    "best_ask_ticks": 10004,
+    "spread_ticks": 3,
+    "mid_x2_ticks": 20005,
+    "midpoint_ticks": 10002.5
+  }
+}

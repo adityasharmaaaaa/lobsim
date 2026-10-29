@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(lobsim_tests
     unit/book_test.cpp
+    unit/lesson1_worked_example_test.cpp
 )
 
 target_link_libraries(lobsim_tests

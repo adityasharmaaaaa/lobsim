@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "fixture_id": "lesson1_hand_simulation",
+  "status": "blocked_missing_original_five_event_scenario",
+  "expected_event_count": 5,
+  "note": "This is an explicit placeholder, not an accepted golden test. The pasted Lesson 1 Section E worked example has four events (E1-E4) and is stored in lesson1_worked_example.json. The evaluator refers to a separate five-event simulation, including an event with 600 unfilled shares; its exact initial book and full event list were not included in the supplied example. Fill this file from that original scenario rather than inventing trades or book states.",
+  "initial_book": null,
+  "events": [],
+  "expected_trades": [],
+  "expected_book_states": [],
+  "order_accounting": []
+}
