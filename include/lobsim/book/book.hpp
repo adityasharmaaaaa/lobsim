@@ -28,11 +28,11 @@ struct OrderIdHash {
 };
 
 class Book {
-public:
+  public:
     Book() = default;
 
-    //inserts without matching. Crossed books are permitted for invariant tests;
-    //check_invariants() reports them. Sequence numbers are assigned internally.
+    // inserts without matching. Crossed books are permitted for invariant tests;
+    // check_invariants() reports them. Sequence numbers are assigned internally.
     [[nodiscard]] RestResult rest(Order order);
 
     [[nodiscard]] std::optional<Price> best_bid() const;
@@ -46,7 +46,7 @@ public:
     // Returns nullopt when valid, otherwise the first detected violation.
     [[nodiscard]] std::optional<std::string> check_invariants() const;
 
-private:
+  private:
     // Test-only friend: keeps per-level FIFO inspection out of the public API.
     friend struct BookTestAccess;
 
@@ -67,4 +67,4 @@ private:
     std::uint64_t next_seq_{1};
 };
 
-}  // namespace lobsim
+} // namespace lobsim

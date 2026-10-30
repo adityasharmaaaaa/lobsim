@@ -27,5 +27,9 @@ target_compile_options(lobsim_tests PRIVATE
     -Wconversion
 )
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(lobsim_tests PRIVATE -Wno-c2y-extensions)
+endif()
+
 include(Catch)
 catch_discover_tests(lobsim_tests)

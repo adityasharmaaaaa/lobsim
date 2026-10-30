@@ -16,20 +16,20 @@ enum class RestError {
 
 [[nodiscard]] constexpr std::string_view to_string(RestError error) noexcept {
     switch (error) {
-        case RestError::None:
-            return "None";
-        case RestError::InvalidOrderId:
-            return "Invalid order ID";
-        case RestError::InvalidPrice:
-            return "Invalid price";
-        case RestError::InvalidQuantity:
-            return "Invalid quantity";
-        case RestError::DuplicateOrderId:
-            return "Duplicate order ID";
-        case RestError::InvalidSide:
-            return "Invalid side";
-        case RestError::InvalidSequence:
-            return "Sequence number exhausted";
+    case RestError::None:
+        return "None";
+    case RestError::InvalidOrderId:
+        return "Invalid order ID";
+    case RestError::InvalidPrice:
+        return "Invalid price";
+    case RestError::InvalidQuantity:
+        return "Invalid quantity";
+    case RestError::DuplicateOrderId:
+        return "Duplicate order ID";
+    case RestError::InvalidSide:
+        return "Invalid side";
+    case RestError::InvalidSequence:
+        return "Sequence number exhausted";
     }
     return "Unknown error";
 }
@@ -46,4 +46,4 @@ struct RestResult {
     }
 };
 
-}  // namespace lobsim
+} // namespace lobsim

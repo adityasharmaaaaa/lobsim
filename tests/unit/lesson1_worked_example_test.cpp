@@ -1,5 +1,5 @@
-#include "lobsim/book/book.hpp"
 #include "../fixtures/lesson1_worked_example.hpp"
+#include "lobsim/book/book.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -12,7 +12,7 @@ TEST_CASE("Lesson 1 Section E fixture preserves initial book state and FIFO") {
     REQUIRE(book.best_bid() == Price{10002});
     REQUIRE(book.best_ask() == Price{10004});
     REQUIRE(book.spread_ticks() == 2);
-    REQUIRE(book.mid_x2() == 20006);  // 10002 + 10004; midpoint is 10003 ticks = $100.03.
+    REQUIRE(book.mid_x2() == 20006); // 10002 + 10004; midpoint is 10003 ticks = $100.03.
 
     CHECK(book.depth_at(Side::Sell, Price{10004}) == Qty{400});
     CHECK(book.depth_at(Side::Sell, Price{10005}) == Qty{400});
@@ -41,15 +41,15 @@ TEST_CASE("Lesson 1 Section E fixture preserves initial book state and FIFO") {
     // through the test-only friend accessor.
     const auto ask_queue = BookTestAccess::order_ids_at(book, Side::Sell, Price{10004});
     REQUIRE(ask_queue.size() == 2);
-    CHECK(ask_queue[0] == OrderId{1});  // A1 arrived before A2.
+    CHECK(ask_queue[0] == OrderId{1}); // A1 arrived before A2.
     CHECK(ask_queue[1] == OrderId{2});
 
     const auto bid_queue = BookTestAccess::order_ids_at(book, Side::Buy, Price{10002});
     REQUIRE(bid_queue.size() == 2);
-    CHECK(bid_queue[0] == OrderId{11});  // B1 arrived before B2.
+    CHECK(bid_queue[0] == OrderId{11}); // B1 arrived before B2.
     CHECK(bid_queue[1] == OrderId{12});
 
     CHECK_FALSE(book.check_invariants().has_value());
 }
 
-}  // namespace lobsim
+} // namespace lobsim
